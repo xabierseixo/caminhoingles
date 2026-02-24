@@ -1,0 +1,233 @@
+@import url('https://fonts.googleapis.com/css?family=Inter:400,600&display=swap');
+
+body {
+  font-family: 'Inter', 'Lato', 'Nunito', Arial, sans-serif;
+  background: #f7f8fa;
+  color: #222;
+}
+
+.sidebar, .leaflet-control, .donut-legend {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(30,40,60,0.08);
+}
+
+.leaflet-marker-icon, .donut-arc, .marker-modern {
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.leaflet-marker-icon:hover, .donut-arc:hover, .marker-modern:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px #4a90e2;
+  cursor: pointer;
+}
+
+.popup-modern {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(30,40,60,0.12);
+  padding: 12px 16px;
+  font-family: 'Inter', Arial, sans-serif;
+  color: #222;
+}
+.popup-modern a {
+  color: #3bb273;
+  font-weight: 600;
+  text-decoration: none;
+}
+.popup-modern .badge {
+  background: #4a90e2;
+  color: #fff;
+  font-size: 0.95em;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+.donut-text {
+  font-weight: 600;
+  font-size: 15px;
+  color: #222;
+}
+
+.leaflet-control-attribution a {
+  text-decoration: none;
+  display: none;
+}
+
+
+
+
+.sidebar-tab {
+  width: 54px;
+  height: 40px;
+  background: #fff;
+  color: inherit;
+  font-size: 1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: normal;
+  font-weight: normal;
+  border: none;
+  border-radius: 0;
+  user-select: none;
+  cursor: pointer;
+  z-index: 1060;
+  /* Sen position, herda do flex do wrapper */
+  box-shadow: none;
+  transition: none;
+}
+
+  top: 0;
+  left: 0;
+  height: 100vh;
+  border: none;
+  border-radius: 0;
+  box-shadow: 2px 2px 16px 0 rgba(60,60,60,0.10);
+}
+
+.offcanvas-backdrop {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .offcanvas.offcanvas-start {
+    width: 90vw !important;
+    min-width: unset;
+    max-width: unset;
+  }
+  .sidebar-tab {
+    right: -54px;
+    width: 54px;
+    height: 40px;
+  }
+}
+
+
+
+@media (max-width: 600px) {
+  #sidebar.sidebar-empty {
+    width: 90vw;
+    height: 100vh;
+    border-radius: 0 0 18px 18px;
+    top: 0;
+    left: 0;
+  }
+}
+
+.map-sidebar {
+  display: none;
+}
+
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 1051;
+  background: #f8fafc;
+  border-radius: 18px;
+  box-shadow: 2px 2px 16px 0 rgba(60,60,60,0.10);
+  min-width: 270px;
+  max-width: 90vw;
+  padding: 1.5rem 1.2rem 1.2rem 1.2rem;
+  border: 1px solid #e0e6ed;
+  transition: box-shadow 0.2s;
+}
+.map-sidebar .sidebar-header {
+  color: #222b45;
+  letter-spacing: 0.01em;
+}
+.map-sidebar .form-select {
+  background: #fff;
+  border: 1px solid #e0e6ed;
+  color: #222b45;
+}
+.map-sidebar .form-check-input:checked {
+  background-color: #3bb273;
+  border-color: #3bb273;
+}
+.map-sidebar .form-check-input {
+  width: 2.2em;
+  height: 1.2em;
+}
+.map-sidebar .form-check-label {
+  margin-left: 0.5em;
+  color: #222b45;
+  font-weight: 500;
+}
+@media (max-width: 600px) {
+  .drawer-menu {
+  position: absolute;
+  top: 32px;
+  left: 0;
+  z-index: 1051;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 340px;
+  background: #f8fafc;
+  border-top-right-radius: 18px;
+  border-bottom-right-radius: 18px;
+  box-shadow: 2px 2px 16px 0 rgba(60,60,60,0.10);
+  min-width: 270px;
+  max-width: 90vw;
+  padding: 1.5rem 1.2rem 1.2rem 1.2rem;
+  border: 1px solid #e0e6ed;
+  opacity: 1;
+  pointer-events: auto;
+  transition: none;
+}
+    top: 12px;
+    left: 0;
+    height: 220px;
+  }
+  .drawer-content {
+    min-width: 90vw;
+    border-radius: 0 0 18px 18px;
+    padding: 1rem 0.7rem;
+    height: 100%;
+  }
+  .drawer-tab {
+    height: 80px;
+    border-radius: 0 0 18px 18px;
+  }
+}
+
+.drawer-tab {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1060;
+  width: 54px;
+  height: 140px;
+  background: #fff;
+  border-top-right-radius: 18px;
+  border-bottom-right-radius: 18px;
+  box-shadow: 2px 2px 12px 0 rgba(60,60,60,0.10);
+  border: 1px solid #e0e6ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 0;
+  transition: left 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.2s;
+  padding: 0;
+}
+.drawer-menu.open .drawer-tab {
+  left: 270px;
+}
+.drawer-tab-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.tab-text {
+  font-size: 1.1em;
+  color: #3bb273;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  user-select: none;
+  line-height: 1.1;
+}
+

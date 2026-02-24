@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% block title %}Feed · Camiño Inglés{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+<style>
+.post-card { border-radius: 12px; border: 1px solid #e8edf2; background: #fff; margin-bottom: 1rem; }
+.post-card .post-body { padding: 1rem 1rem 0.5rem; }
+.post-card .post-footer { padding: 0.4rem 1rem 0.6rem; border-top: 1px solid #f0f3f7; display:flex; gap:0.5rem; align-items:center; }
+.post-card .comentarios-area { background: #f8f9fb; border-top: 1px solid #eef1f5; padding: 0.75rem 1rem; display:none; }
+.post-card .comentarios-area.open { display:block; }
+.btn-reaccionar { border:none; background:none; color:#aaa; font-size:1.05em; cursor:pointer; padding:2px 6px; border-radius:6px; transition: color .15s; }
+.btn-reaccionar.activa { color:#e05c7a; }
+.btn-reaccionar:hover { color:#e05c7a; background:#fdf0f3; }
+.avatar-sm { width:32px; height:32px; border-radius:50%; object-fit:cover; background:#ccc; display:inline-flex; align-items:center; justify-content:center; font-weight:bold; color:#fff; font-size:.9em; flex-shrink:0; }
+.comentario-item { display:flex; gap:.5rem; margin-bottom:.5rem; font-size:.88em; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:620px;">
+
+  <div class="d-flex align-items-center mb-3 gap-2">
+    <a href="{{ url_for('main.home') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="fa-solid fa-map me-1"></i>Mapa
+    </a>
+    <h5 class="mb-0 flex-grow-1">
+      <i class="fa-solid fa-stream me-1 text-primary"></i>Feed do camiño
+    </h5>
+    {% if current_user.is_authenticated %}
+      <button class="btn btn-sm btn-primary" id="btnNovoPostFeed">
+        <i class="fa-solid fa-pen-to-square me-1"></i>Publicar
+      </button>
+    {% endif %}
+  </div>
+
+  {% if not posts %}
+    <div class="text-muted text-center py-5">
+      <i class="fa-solid fa-campground fa-2x mb-2 d-block"></i>
+      Aínda non hai publicacións. Séi o primeiro/a!
+    </div>
+  {% endif %}
+
+  {% for post in posts %}
+  <div class="post-card shadow-sm" id="post-{{ post.id }}">
+    <div class="post-body">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        {% if post.avatar %}
+          <img src="{{ post.avatar }}" class="avatar-sm" alt="">
+        {% else %}
+          <div class="avatar-sm">{{ post.username[0] | upper }}</div>
+        {% endif %}
+        <div>
+          <strong>@{{ post.username }}</strong>
+          <span class="badge ms-1
+            {% if post.rol == 'provedor' %}bg-success
+            {% elif post.rol == 'admin' %}bg-danger
+            {% else %}bg-primary{% endif %}" style="font-size:.65em;">
+            {{ post.rol }}
+          </span>
+          <div class="text-muted" style="font-size:.78em;">
+            {{ post.created_at[:16].replace('T',' ') }}
+            {% if post.poi_slug %}
+              · <i class="fa-solid fa-location-dot"></i> {{ post.poi_slug }}
+            {% elif post.lat %}
+              · <i class="fa-solid fa-map-pin"></i> xeolocado
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <p class="mb-0" style="white-space:pre-wrap;">{{ post.contido }}</p>
+    </div>
+
+    <div class="post-footer">
+      <!-- Reacción -->
+      <button class="btn-reaccionar {% if post.miña_reaccion %}activa{% endif %}"
+              data-post-id="{{ post.id }}"
+              {% if not current_user.is_authenticated %}disabled title="Inicia sesión para reaccionar"{% endif %}>
+        <i class="fa-{% if post.miña_reaccion %}solid{% else %}regular{% endif %} fa-heart me-1"></i>
+        <span class="reaccions-count">{{ post.total_reaccions }}</span>
+      </button>
+
+      <!-- Comentarios toggle -->
+      <button class="btn-reaccionar btn-comentarios-toggle" data-post-id="{{ post.id }}" title="Comentarios">
+        <i class="fa-regular fa-comment me-1"></i>
+        <span class="comentarios-count">{{ post.total_comentarios }}</span>
+      </button>
+
+      <span class="ms-auto text-muted" style="font-size:.8em;">
+        {% if post.visibilidade == 'publico' %}
+          <i class="fa-solid fa-globe"></i>
+        {% else %}
+          <i class="fa-solid fa-lock"></i>
+        {% endif %}
+      </span>
+    </div>
+
+    <!-- Área de comentarios (carga ao abrir) -->
+    <div class="comentarios-area" id="comentarios-{{ post.id }}">
+      <div class="comentarios-lista mb-2"></div>
+      {% if current_user.is_authenticated %}
+      <div class="d-flex gap-2">
+        <div class="avatar-sm" style="font-size:.75em;">{{ current_user.username[0] | upper }}</div>
+        <div class="flex-grow-1">
+          <div class="input-group input-group-sm">
+            <input type="text" class="form-control comentario-input" placeholder="Escribe un comentario..." maxlength="500">
+            <button class="btn btn-primary btn-enviar-comentario" data-post-id="{{ post.id }}">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+{% if current_user.is_authenticated %}
+<!-- Modal post (reutilizamos o mesmo do mapa) -->
+<div class="modal fade" id="modalPost" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title mb-0" id="modalPostLabel">
+          <i class="fa-solid fa-pen-to-square me-1 text-primary"></i>Publicar no camiño
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pb-2">
+        <textarea id="postContido" class="form-control mb-2" rows="4"
+          placeholder="Que estás a vivir no camiño?" maxlength="1000"></textarea>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div id="postLocLabel" class="text-muted small flex-grow-1">
+            <i class="fa-solid fa-spinner fa-spin me-1"></i>Obtendo posición...
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="postPublico" checked>
+            <label class="form-check-label small" for="postPublico">Público</label>
+          </div>
+        </div>
+        <div id="postErro" class="text-danger small" style="display:none;"></div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnEnviarPost">
+          <i class="fa-solid fa-paper-plane me-1"></i>Publicar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+// ---- Reaccións ----
+document.querySelectorAll('.btn-reaccionar[data-post-id]').forEach(btn => {
+  if (btn.disabled) return;
+  btn.addEventListener('click', async () => {
+    const pid = btn.dataset.postId;
+    const r = await fetch(`/api/posts/${pid}/reaccionar`, {method:'POST'});
+    if (!r.ok) return;
+    const d = await r.json();
+    const activa = d.activa;
+    btn.classList.toggle('activa', activa);
+    btn.querySelector('i').className = `fa-${activa?'solid':'regular'} fa-heart me-1`;
+    btn.querySelector('.reaccions-count').textContent = d.total;
+  });
+});
+
+// ---- Comentarios ----
+async function cargarComentarios(postId) {
+  const area = document.getElementById(`comentarios-${postId}`);
+  const lista = area.querySelector('.comentarios-lista');
+  lista.innerHTML = '<span class="text-muted small">Cargando...</span>';
+  const r = await fetch(`/api/posts/${postId}/comentarios`);
+  const d = await r.json();
+  renderizarComentarios(lista, d.comentarios);
+}
+
+function renderizarComentarios(lista, comentarios) {
+  if (!comentarios.length) {
+    lista.innerHTML = '<p class="text-muted small mb-2">Sen comentarios aínda.</p>';
+    return;
+  }
+  lista.innerHTML = comentarios.map(c => `
+    <div class="comentario-item">
+      <div class="avatar-sm" style="font-size:.7em;min-width:28px;height:28px;">${c.username[0].toUpperCase()}</div>
+      <div>
+        <strong style="font-size:.85em;">@${c.username}</strong>
+        <span class="text-muted" style="font-size:.75em;"> · ${c.created_at.slice(0,16)}</span>
+        <div>${c.contido}</div>
+      </div>
+    </div>`).join('');
+}
+
+document.querySelectorAll('.btn-comentarios-toggle').forEach(btn => {
+  let cargado = false;
+  btn.addEventListener('click', () => {
+    const pid = btn.dataset.postId;
+    const area = document.getElementById(`comentarios-${pid}`);
+    const open = area.classList.toggle('open');
+    if (open && !cargado) { cargarComentarios(pid); cargado = true; }
+  });
+});
+
+document.querySelectorAll('.btn-enviar-comentario').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const pid = btn.dataset.postId;
+    const area = document.getElementById(`comentarios-${pid}`);
+    const input = area.querySelector('.comentario-input');
+    const contido = input.value.trim();
+    if (!contido) return;
+    btn.disabled = true;
+    const r = await fetch(`/api/posts/${pid}/comentarios`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({contido}),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      input.value = '';
+      const lista = area.querySelector('.comentarios-lista');
+      renderizarComentarios(lista, d.comentarios);
+      // Actualizar contador
+      const card = document.getElementById(`post-${pid}`);
+      const cnt = card.querySelector('.comentarios-count');
+      if (cnt) cnt.textContent = d.comentarios.length;
+    }
+    btn.disabled = false;
+  });
+});
+
+// Enter para enviar comentario
+document.querySelectorAll('.comentario-input').forEach(inp => {
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      inp.closest('.comentarios-area').querySelector('.btn-enviar-comentario').click();
+    }
+  });
+});
+
+// ---- Novo post dende o feed ----
+const btnNovoFeed = document.getElementById('btnNovoPostFeed');
+if (btnNovoFeed) {
+  btnNovoFeed.addEventListener('click', () => {
+    // Reutilizamos a lóxica de abrirModalPost se está dispoñible, se non abrimos directamente
+    if (typeof abrirModalPost === 'function') {
+      abrirModalPost(null);
+    } else {
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPost')).show();
+    }
+  });
+
+  // Enviar post e recargar feed
+  document.getElementById('btnEnviarPost').addEventListener('click', async () => {
+    const contido = document.getElementById('postContido').value.trim();
+    const erroDiv = document.getElementById('postErro');
+    erroDiv.style.display = 'none';
+    if (!contido) { erroDiv.textContent = 'Escribe algo.'; erroDiv.style.display=''; return; }
+    const publico = document.getElementById('postPublico').checked;
+    const btn = document.getElementById('btnEnviarPost');
+    btn.disabled = true;
+    const r = await fetch('/api/posts', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({contido, visibilidade: publico?'publico':'privado'}),
+    });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      bootstrap.Modal.getInstance(document.getElementById('modalPost')).hide();
+      window.location.reload();
+    } else {
+      erroDiv.textContent = d.erro || 'Erro ao publicar.';
+      erroDiv.style.display = '';
+      btn.disabled = false;
+    }
+  });
+
+  // GPS ao abrir modal
+  document.getElementById('modalPost').addEventListener('show.bs.modal', () => {
+    const label = document.getElementById('postLocLabel');
+    label.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Obtendo posición...';
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        p => { label.innerHTML = '<i class="fa-solid fa-location-dot me-1 text-success"></i>Posición obtida'; },
+        () => { label.innerHTML = '<i class="fa-solid fa-location-slash me-1 text-muted"></i>Sen posición GPS'; },
+        {timeout:8000}
+      );
+    }
+  });
+}
+</script>
+{% endblock %}

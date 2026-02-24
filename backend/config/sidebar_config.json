@@ -1,0 +1,124 @@
+{
+  "version": "2.0",
+  "descricion": "Configuración do sidebar. Cada sección define unha fonte de datos e filtros.",
+
+  "seccions": [
+    {
+      "id": "aloxamento",
+      "nome": "Aloxamento",
+      "fonte": "recursos",
+      "icono_seccion": "fa-bed",
+      "activo": true,
+
+      "taxonomia": {
+        "endpoint": "taxonomia/categorias/servizos/hostalaria/aloxamento/",
+        "mostrar_xerarquia": true
+      },
+
+      "filtros": {
+        "minimo_items": 0,
+        "requirir_coordenadas": true,
+        "filtrar_concellos_camino": true,
+        "ordenar_por": "nome"
+      },
+
+      "iconos_subcategorias": {
+        "hoteis": {"icon": "fa-hotel", "cor": "#4a90d9"},
+        "hostal": {"icon": "fa-house", "cor": "#5a9fd4"},
+        "albergues": {"icon": "fa-campground", "cor": "#7ac0ca"},
+        "albergues-do-camino-de-santiago": {"icon": "fa-route", "cor": "#e6a800"},
+        "casas-rurais": {"icon": "fa-tree", "cor": "#2e8b57"},
+        "vivenda-vacacional": {"icon": "fa-house-chimney", "cor": "#8ad0c5"},
+        "_default": {"icon": "fa-bed", "cor": "#4a90d9"}
+      }
+    },
+
+    {
+      "id": "patrimonio-relixioso",
+      "nome": "Patrimonio relixioso",
+      "fonte": "patrimonio-material",
+      "filtro_categoria": "patrimonio-relixioso",
+      "icono_seccion": "fa-church",
+      "activo": true,
+
+      "filtros": {
+        "minimo_items": 1,
+        "requirir_coordenadas": true,
+        "filtrar_concellos_camino": true,
+        "ordenar_por": "nome"
+      },
+
+      "iconos_subcategorias": {
+        "igrexas": {"icon": "fa-church", "cor": "#8b0000"},
+        "capelas": {"icon": "fa-place-of-worship", "cor": "#a0522d"},
+        "mosteiros": {"icon": "fa-vihara", "cor": "#4a4a4a"},
+        "cruceiros": {"icon": "fa-cross", "cor": "#696969"},
+        "ermidas": {"icon": "fa-place-of-worship", "cor": "#b8860b"},
+        "catedrais": {"icon": "fa-church", "cor": "#4b0082"},
+        "conventos": {"icon": "fa-vihara", "cor": "#556b2f"},
+        "santuarios": {"icon": "fa-gopuram", "cor": "#8b4513"},
+        "_default": {"icon": "fa-landmark", "cor": "#8b4513"}
+      }
+    },
+
+    {
+      "id": "patrimonio-ambiental",
+      "nome": "Patrimonio ambiental",
+      "fonte": "patrimonio-material",
+      "filtro_categoria": "patrimonio-ambiental",
+      "icono_seccion": "fa-leaf",
+      "activo": true,
+
+      "filtros": {
+        "minimo_items": 1,
+        "requirir_coordenadas": true,
+        "filtrar_concellos_camino": true,
+        "ordenar_por": "nome"
+      },
+
+      "iconos_subcategorias": {
+        "praias": {"icon": "fa-umbrella-beach", "cor": "#1e90ff"},
+        "rios": {"icon": "fa-water", "cor": "#4169e1"},
+        "lagoas-e-humidais": {"icon": "fa-frog", "cor": "#228b22"},
+        "marismas": {"icon": "fa-frog", "cor": "#2e8b57"},
+        "bosques": {"icon": "fa-tree", "cor": "#006400"},
+        "espazos-naturais": {"icon": "fa-mountain", "cor": "#808000"},
+        "miradoiros": {"icon": "fa-binoculars", "cor": "#daa520"},
+        "_default": {"icon": "fa-leaf", "cor": "#228b22"}
+      }
+    },
+    {
+      "id": "patrimonio-civil",
+      "nome": "Patrimonio civil",
+      "fonte": "patrimonio-material",
+      "filtro_categoria": "patrimonio-civil",
+      "icono_seccion": "fa-building-columns",
+      "activo": true,
+
+      "filtros": {
+        "minimo_items": 1,
+        "requirir_coordenadas": true,
+        "filtrar_concellos_camino": true,
+        "ordenar_por": "nome"
+      },
+
+      "iconos_subcategorias": {
+        "castelos": {"icon": "fa-chess-rook", "cor": "#4a4a4a"},
+        "pazos": {"icon": "fa-landmark-dome", "cor": "#8b4513"},
+        "pontes": {"icon": "fa-bridge", "cor": "#696969"},
+        "torres": {"icon": "fa-tower-observation", "cor": "#4b0082"},
+        "_default": {"icon": "fa-building-columns", "cor": "#666"}
+      }
+    }
+
+
+
+
+
+  ],
+
+  "configuracion_global": {
+    "mostrar_contador": true,
+    "mostrar_icono_seccion": true
+  }
+}

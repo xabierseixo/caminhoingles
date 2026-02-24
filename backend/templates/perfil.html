@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Perfil · {{ user.username }}{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:640px;">
+
+  <!-- Cabeceira do perfil -->
+  <div class="d-flex align-items-center gap-3 mb-4">
+    {% if user.avatar %}
+      <img src="{{ user.avatar }}" alt="Avatar" class="rounded-circle" style="width:72px;height:72px;object-fit:cover;">
+    {% else %}
+      <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white"
+           style="width:72px;height:72px;font-size:2em;">
+        {{ user.username[0] | upper }}
+      </div>
+    {% endif %}
+    <div>
+      <h2 class="mb-0">{{ user.username }}</h2>
+      <span class="badge
+        {% if user.rol == 'admin' %}bg-danger
+        {% elif user.rol == 'provedor' %}bg-success
+        {% elif user.rol == 'concello' %}bg-warning text-dark
+        {% else %}bg-primary{% endif %}">
+        {{ user.rol | capitalize }}
+      </span>
+      {% if user.bio %}
+        <p class="text-muted small mt-1 mb-0">{{ user.bio }}</p>
+      {% endif %}
+    </div>
+    <a href="{{ url_for('main.logout') }}" class="btn btn-outline-secondary btn-sm ms-auto">Pechar sesión</a>
+  </div>
+
+  <!-- Check-ins -->
+  <div class="card mb-4">
+    <div class="card-header d-flex align-items-center gap-2">
+      <i class="fa-solid fa-stamp text-primary"></i>
+      <strong>Check-ins</strong>
+      <span class="badge bg-primary ms-auto">{{ checkins | length }}</span>
+    </div>
+    <div class="card-body p-0">
+      {% if checkins %}
+        <ul class="list-group list-group-flush">
+          {% for ci in checkins %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              <i class="fa-solid fa-location-dot me-1 text-muted"></i>
+              <a href="{{ url_for('main.home') }}" class="text-decoration-none">{{ ci.poi_slug }}</a>
+            </span>
+            <small class="text-muted">{{ ci.created_at[:10] }}</small>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted small p-3 mb-0">Aínda non fixeches ningún check-in. Abre o mapa e fai un!</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Posts -->
+  <div class="card mb-4">
+    <div class="card-header d-flex align-items-center gap-2">
+      <i class="fa-solid fa-pen-to-square text-success"></i>
+      <strong>As miñas publicacións</strong>
+      <span class="badge bg-success ms-auto">{{ posts | length }}</span>
+    </div>
+    <div class="card-body p-0">
+      {% if posts %}
+        <ul class="list-group list-group-flush">
+          {% for post in posts %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between">
+              <span class="badge {% if post.visibilidade == 'publico' %}bg-success{% else %}bg-secondary{% endif %} small">
+                {{ post.visibilidade }}
+              </span>
+              <small class="text-muted">{{ post.created_at[:10] }}</small>
+            </div>
+            <p class="mb-0 mt-1 small">{{ post.contido }}</p>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted small p-3 mb-0">Aínda non publicaches nada.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="text-center">
+    <a href="{{ url_for('main.home') }}" class="btn btn-outline-primary">
+      <i class="fa-solid fa-map me-1"></i>Volver ao mapa
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,776 @@
+{% extends 'base.html' %}
+{% block title %}Mapa | {{ proxecto_nome | default('Camiño Inglés') }}{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous"/>
+    <style>
+html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+#map { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; touch-action: pan-x pan-y; }
+.donut-cluster { background: none !important; border: none !important; }
+.donut-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #333; font-weight: bold; font-size: 13px; text-align: center; pointer-events: none; }
+.donut-legend { background-color: rgba(255,255,255,0.95); padding: 2px 8px; white-space: nowrap; font-size: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.donut-arc:hover { cursor: pointer; }
+.concello-label span {
+  font-size: 1.1em;
+  color: #444;
+  font-weight: bold;
+  text-shadow: 0 1px 4px #fff;
+  pointer-events: none;
+  transition: font-size 0.1s;
+}
+/* Patch visual moderno para elementos do mapa */
+.marker-modern {
+  border-radius: 50%;
+  box-shadow: 0 2px 12px rgba(30,40,60,0.12);
+}
+/* Panel de elevación */
+#elevationPanel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1500;
+  background: rgba(255,255,255,0.96);
+  border-top: 2px solid #e0e6ed;
+  box-shadow: 0 -2px 12px rgba(30,40,60,0.10);
+  transition: transform 0.3s ease;
+  font-family: 'Inter', Arial, sans-serif;
+}
+#elevationPanel.collapsed {
+  transform: translateY(calc(100% - 34px));
+}
+#elevationToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  cursor: pointer;
+  background: #f7f8fa;
+  border-bottom: 1px solid #e0e6ed;
+  user-select: none;
+}
+#elevationToggle:hover { background: #eef1f5; }
+#elevationToggle .stats-summary {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85em;
+  color: #555;
+}
+#elevationToggle .stats-summary .stat-val { font-weight: 600; color: #222; }
+#elevationChart {
+  width: 100%;
+  height: 140px;
+  display: block;
+}
+#elevationChart canvas {
+  width: 100%;
+  height: 100%;
+}
+#elevationTooltip {
+  position: absolute;
+  background: rgba(34,43,69,0.92);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  pointer-events: none;
+  white-space: nowrap;
+  display: none;
+  z-index: 1600;
+}
+#selectorCamino { margin: 0 12px; }
+#selectorCamino .btn { font-size: 0.8em; padding: 1px 10px; }
+.elev-stat-badge {
+  display: inline-block;
+  background: #f0f2f5;
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: 0.8em;
+  color: #555;
+  margin-left: 4px;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="position-relative w-100 h-100">
+  <div class="position-absolute" style="top:60px; right:10px; z-index:2000; display:flex; flex-direction:column; gap:8px;">
+    <button id="centerMapBtn" title="Centrar camiño" class="btn btn-light shadow-sm mb-2">
+      <span aria-label="Centrar camiño" style="font-size:1.3em;">🧭</span>
+    </button>
+    <button id="fullscreenBtn" title="Pantalla completa" class="btn btn-light shadow-sm">
+      <span aria-label="Pantalla completa" style="font-size:1.3em;">⛶</span>
+    </button>
+  </div>
+  <!-- Bootstrap Offcanvas Sidebar -->
+  <button id="sidebarHamburger" title="Menú" class="btn btn-light border position-absolute" style="top:10px; left:10px; z-index:2000;" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;"><rect y="4" width="20" height="1" rx="0.5" fill="#444"/><rect y="9.5" width="20" height="1" rx="0.5" fill="#444"/><rect y="15" width="20" height="1" rx="0.5" fill="#444"/></svg>
+  </button>
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel" style="width:280px;">
+    <div class="offcanvas-header align-items-center">
+      <h5 class="offcanvas-title mb-0" id="sidebarOffcanvasLabel">Menú</h5>
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.feed') }}" class="btn btn-sm btn-outline-success ms-auto me-1" title="Feed">
+          <i class="fa-solid fa-stream"></i>
+        </a>
+        <a href="{{ url_for('main.perfil') }}" class="btn btn-sm btn-outline-primary me-2" title="O meu perfil">
+          <i class="fa-solid fa-circle-user me-1"></i>{{ current_user.username }}
+        </a>
+      {% else %}
+        <a href="{{ url_for('main.login') }}" class="btn btn-sm btn-outline-secondary ms-auto me-2" title="Iniciar sesión">
+          <i class="fa-solid fa-right-to-bracket me-1"></i>Entrar
+        </a>
+      {% endif %}
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0" id="sidebarContent" style="height:100vh; display:flex; flex-direction:column;">
+      <!-- Busca -->
+      <div class="p-2 border-bottom">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" id="buscaMapa" class="form-control" placeholder="Buscar lugar...">
+        </div>
+        <div id="buscaResultados" class="list-group list-group-flush mt-1" style="max-height:200px; overflow-y:auto; display:none;"></div>
+      </div>
+      <div class="accordion" id="sidebarAccordion">
+        <!-- Capas -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCapas">
+              <i class="fa-solid fa-layer-group me-2"></i>Capas
+            </button>
+          </h2>
+          <div id="collapseCapas" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
+            <div class="accordion-body p-2" id="capasCheckboxes">
+              <div class="text-muted small">Cargando capas...</div>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingRutas">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRutas" aria-expanded="false" aria-controls="collapseRutas">
+              Rutas
+            </button>
+          </h2>
+          <div id="collapseRutas" class="accordion-collapse collapse" aria-labelledby="headingRutas" data-bs-parent="#sidebarAccordion">
+            <div class="accordion-body p-2" id="rutasCheckboxes">
+              <div class="text-muted small">Cargando rutas...</div>
+            </div>
+          </div>
+        </div>
+        <!-- As seccións do sidebar xéranse dinámicamente desde sidebar_config.json -->
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+<!-- Fin navbar collapse -->
+
+<div id="map"></div>
+
+{% if current_user.is_authenticated %}
+<!-- Botón flotante para crear post -->
+<button id="btnNuevoPost" title="Publicar no camiño"
+  style="position:fixed;bottom:80px;right:16px;z-index:2000;width:52px;height:52px;border-radius:50%;font-size:1.4em;box-shadow:0 3px 12px rgba(0,0,0,0.25);"
+  class="btn btn-primary">
+  <i class="fa-solid fa-pen-to-square"></i>
+</button>
+
+<!-- Modal para crear post -->
+<div class="modal fade" id="modalPost" tabindex="-1" aria-labelledby="modalPostLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title mb-0" id="modalPostLabel">
+          <i class="fa-solid fa-pen-to-square me-1 text-primary"></i>Publicar no camiño
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pb-2">
+        <textarea id="postContido" class="form-control mb-2" rows="4"
+          placeholder="Que estás a vivir no camiño?" maxlength="1000"></textarea>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div id="postLocLabel" class="text-muted small flex-grow-1">
+            <i class="fa-solid fa-spinner fa-spin me-1"></i>Obtendo posición...
+          </div>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="postPublico" checked>
+            <label class="form-check-label small" for="postPublico">Público</label>
+          </div>
+        </div>
+        <div id="postErro" class="text-danger small" style="display:none;"></div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnEnviarPost">
+          <i class="fa-solid fa-paper-plane me-1"></i>Publicar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Panel de elevación -->
+<div id="elevationPanel" class="collapsed">
+  <div id="elevationToggle">
+    <span><i class="fa-solid fa-mountain me-1"></i> Perfil de elevación</span>
+    <div class="btn-group btn-group-sm" id="selectorCamino" role="group">
+      <input type="radio" class="btn-check" name="caminoOrixe" id="caminoFerrol" value="ferrol" checked>
+      <label class="btn btn-outline-secondary" for="caminoFerrol">Ferrol</label>
+      <input type="radio" class="btn-check" name="caminoOrixe" id="caminoCoruna" value="coruna">
+      <label class="btn btn-outline-secondary" for="caminoCoruna">A Coruña</label>
+    </div>
+    <div class="stats-summary">
+      <span id="elevStatDist"></span>
+      <span id="elevStatDpos"></span>
+      <span id="elevStatDneg"></span>
+      <span id="elevStatTempo"></span>
+    </div>
+    <i class="fa-solid fa-chevron-up" id="elevToggleIcon"></i>
+  </div>
+  <div id="elevationChart">
+    <canvas id="elevCanvas"></canvas>
+  </div>
+  <div id="elevationTooltip"></div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+<script src="{{ url_for('static', filename='js/Leaflet.DonutCluster.js') }}"></script>
+<script>
+// Usuario autenticado (null se non hai sesión)
+window.currentUser = {{ {'id': current_user.id, 'username': current_user.username, 'rol': current_user.rol} | tojson if current_user.is_authenticated else 'null' }};
+
+const centro = [{{ centro_lat }}, {{ centro_lng }}];
+const zoom = {{ zoom_inicial }};
+const urlCamino = "{{ url_for('main.geojson_camino_ingles') }}";
+const urlConcellos = "{{ url_for('main.geojson_concellos_camino') }}";
+
+// Capas base
+const baseLayers = {
+  "Voyager": L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '© CartoDB, OpenStreetMap contributors'
+  }),
+  "Satélite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: '© Esri & contributors'
+  }),
+  "PNOA España": L.tileLayer('https://www.ign.es/wms-inspire/pnoa-ma?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=OI.OrthoimageCoverage&STYLE=default&FORMAT=image/jpeg&TILEMATRIXSET=EPSG:3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+    maxZoom: 19,
+    attribution: '© Instituto Geográfico Nacional de España'
+  }),
+  "Acuarela": L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.jpg', {
+    maxZoom: 16,
+    attribution: 'Map tiles by Stamen Design, CC BY 3.0 — Map data © OpenStreetMap contributors'
+  }),
+  "Tóner": L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: 'Map tiles by Stamen Design, CC BY 3.0 — Map data © OpenStreetMap contributors'
+  }),
+  "Terreo": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom: 17,
+    attribution: '© OpenTopoMap, OpenStreetMap contributors'
+  }),
+  "Alidade Smooth": L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© Stadia Maps, OpenMapTiles, OpenStreetMap contributors'
+  }),
+  "Alidade Dark": L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© Stadia Maps, OpenMapTiles, OpenStreetMap contributors'
+  }),
+  "Topográfico": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom: 17,
+    attribution: '© OpenTopoMap, OpenStreetMap contributors'
+  }),
+  "MTN España": L.tileLayer('https://www.ign.es/wms-inspire/ign-base?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=MTN&STYLE=default&FORMAT=image/jpeg&TILEMATRIXSET=EPSG:3857&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+    maxZoom: 19,
+    attribution: '© Instituto Geográfico Nacional de España'
+  }),
+  "Claro": L.tileLayer('https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© Stadia Maps, OpenMapTiles, OpenStreetMap contributors'
+  }),
+  "Escuro": L.tileLayer('https://tiles.stadiamaps.com/tiles/osm_dark/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© Stadia Maps, OpenMapTiles, OpenStreetMap contributors'
+  }),
+  "Positron (sen etiquetas)": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '© CartoDB, OpenStreetMap contributors'
+  }),
+  "National Geographic": L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 16,
+    attribution: '© National Geographic, Esri, DeLorme, NAVTEQ'
+  }),
+  "Relevo sombreado": L.tileLayer('https://tiles.stadiamaps.com/tiles/terrain-background/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© Stadia Maps, OpenMapTiles, OpenStreetMap contributors'
+  })
+};
+
+const map = L.map('map', {
+  center: centro,
+  zoom: zoom,
+  layers: [baseLayers["Voyager"]],
+  zoomControl: false,
+  dragging: L.Browser.mobile ? false : true,
+  tap: false,
+  touchZoom: 'center'
+});
+window.map = map;
+// Botón pantalla completa
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+if (fullscreenBtn) {
+  function updateFullscreenIcon() {
+    fullscreenBtn.innerHTML = document.fullscreenElement ? '<span aria-label="Saír de pantalla completa" style="font-size:1.3em;">❌</span>' : '<span aria-label="Pantalla completa" style="font-size:1.3em;">⛶</span>';
+  }
+  fullscreenBtn.onclick = () => {
+    const elem = document.documentElement;
+    if (!document.fullscreenElement) {
+      if (elem.requestFullscreen) elem.requestFullscreen();
+      else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+      else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      else if (document.msExitFullscreen) document.msExitFullscreen();
+    }
+  };
+  document.addEventListener('fullscreenchange', updateFullscreenIcon);
+  updateFullscreenIcon();
+}
+// Botón centrar mapa
+const centerMapBtn = document.getElementById('centerMapBtn');
+if (centerMapBtn && window.map) {
+  centerMapBtn.onclick = () => {
+    // Se hai rutas activas, centrar só nesas; se non, centrar todo o camiño
+    const checks = document.querySelectorAll('#rutasCheckboxes input[type=checkbox]:checked');
+    let bounds = null;
+    if (checks.length && window.geojsonCamino) {
+      const nomesActivos = Array.from(checks).map(chk => chk.value);
+      const featuresFiltradas = window.geojsonCamino.features.filter(f => nomesActivos.includes(f.properties.Name));
+      if (featuresFiltradas.length) {
+        const layer = L.geoJSON({type: 'FeatureCollection', features: featuresFiltradas});
+        bounds = layer.getBounds();
+      }
+    }
+    if (!bounds && layerCamino && layerCamino.getBounds) {
+      bounds = layerCamino.getBounds();
+    }
+    if (bounds && bounds.isValid()) {
+      map.fitBounds(bounds, {padding: [20, 20]});
+    } else {
+      map.setView(centro, zoom);
+    }
+  };
+}
+// Engadir localización do usuario con icono persoa andando Font Awesome
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    window.userPosition = { lat, lng };
+    const faIcon = L.divIcon({
+      html: '<i class="fa-solid fa-person-walking fa-2x" style="color:#e57373;text-shadow:0 1px 4px #fff"></i>',
+      className: '',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32]
+    });
+    const userMarker = L.marker([lat, lng], {icon: faIcon, zIndexOffset: 1000});
+    const popupContent = `
+      <div class="text-center" style="min-width:220px">
+        <strong><i class="fa-solid fa-person-walking me-1"></i>Estás aquí</strong>
+        <hr class="my-2">
+        <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+          <input type="radio" class="btn-check" name="modoRuta" id="modoPe" value="pe" checked>
+          <label class="btn btn-outline-secondary" for="modoPe"><i class="fa-solid fa-person-walking me-1"></i>A pé</label>
+          <input type="radio" class="btn-check" name="modoRuta" id="modoBici" value="bici">
+          <label class="btn btn-outline-secondary" for="modoBici"><i class="fa-solid fa-bicycle me-1"></i>En bici</label>
+        </div>
+        <button class="btn btn-sm btn-outline-primary btn-ruta-camino w-100 mb-2" data-lat="${lat}" data-lng="${lng}">
+          <i class="fa-solid fa-route me-1"></i>Ruta ata o camiño
+        </button>
+        <button class="btn btn-sm btn-outline-success btn-ruta-santiago w-100" data-lat="${lat}" data-lng="${lng}">
+          <i class="fa-solid fa-church me-1"></i>Ruta completa a Santiago
+        </button>
+        <div class="popup-resultado-ruta"></div>
+        {% if current_user.is_authenticated %}
+        <hr class="my-2">
+        <button class="btn btn-sm btn-outline-primary w-100" onclick="abrirModalPost({lat:${lat},lng:${lng}})">
+          <i class="fa-solid fa-pen-to-square me-1"></i>Publicar desde aquí
+        </button>
+        {% endif %}
+      </div>
+    `;
+    userMarker.bindPopup(popupContent).openPopup();
+    userMarker.addTo(map);
+
+    // Aplicar filtro de proximidade e autoseleccionar variante cando o GeoJSON estea cargado
+    const esperarEAplicarFiltro = () => {
+      if (window.geojsonCamino && typeof aplicarFiltroProximidade === 'function') {
+        aplicarFiltroProximidade();
+        if (typeof autoseleccionarVariante === 'function') autoseleccionarVariante();
+      } else {
+        setTimeout(esperarEAplicarFiltro, 500);
+      }
+    };
+    esperarEAplicarFiltro();
+  }, function(err) {
+    console.warn('Xeolocalización non dispoñible:', err.message);
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+// En móbil: só permitir mover o mapa con dous dedos
+// En móbil: permitir movemento e zoom con dous dedos (comportamento estándar)
+// En móbil: comportamento estándar Leaflet, pero só o mapa captura o zoom táctil
+if (L.Browser.mobile) {
+  map.dragging.enable();
+  map.touchZoom.enable();
+  map.tap = true;
+}
+
+// Os resultados de ruta persisten automaticamente no popup grazas a popup.setContent()
+// Non fai falta reinxectar manualmente no evento popupopen.
+
+// Handler para clicks en POIs da lista de "POIs próximos"
+document.addEventListener('click', function(e) {
+  const link = e.target.closest('.poi-link');
+  if (!link) return;
+  e.preventDefault();
+  const lat = parseFloat(link.dataset.lat);
+  const lng = parseFloat(link.dataset.lng);
+  if (isNaN(lat) || isNaN(lng)) return;
+  map.closePopup();
+  map.setView([lat, lng], 16);
+  // Abrir popup do marcador se existe
+  if (window.sharedCluster) {
+    window.sharedCluster.eachLayer(marker => {
+      const pos = marker.getLatLng();
+      if (Math.abs(pos.lat - lat) < 0.0001 && Math.abs(pos.lng - lng) < 0.0001) {
+        window.sharedCluster.zoomToShowLayer(marker, () => {
+          marker.openPopup();
+        });
+      }
+    });
+  }
+});
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+L.control.layers(baseLayers).addTo(map);
+// Só ocultar a bandeira de Ucraína, manter o resto da atribución
+const leafletFlag = document.querySelector('.leaflet-control-attribution img[alt*="Ukraine"]');
+if (leafletFlag) {
+  leafletFlag.style.display = 'none';
+}
+
+// Capa concellos (CARGAR SEMPRE PRIMEIRO)
+window.concelloLayer = null;
+window.concelloLabelsLayer = L.layerGroup();
+window.concellosVisible = true;
+
+fetch(urlConcellos)
+  .then(resp => resp.json())
+  .then(data => {
+    if (!map.getPane('concellosPane')) {
+      map.createPane('concellosPane');
+      map.getPane('concellosPane').style.zIndex = 400;
+    }
+    window.concelloLayer = L.geoJSON(data, {
+      pane: 'concellosPane',
+      style: {
+        color: '#666',
+        weight: 1,
+        opacity: 0.6,
+        fillOpacity: 0
+      }
+    }).addTo(map);
+
+    data.features.forEach(f => {
+      if (!f.properties || !f.properties.Concello) return;
+      let coords = f.geometry.type === 'Polygon' ? f.geometry.coordinates[0] : f.geometry.coordinates[0][0];
+      let x = 0, y = 0;
+      coords.forEach(c => { x += c[0]; y += c[1]; });
+      x /= coords.length; y /= coords.length;
+      L.marker([y, x], {
+        pane: 'concellosPane',
+        icon: L.divIcon({
+          className: 'concello-label',
+          html: `<span style="font-size:1.1em; color:#444; font-weight:bold; text-shadow:0 1px 4px #fff;">${f.properties.Concello}</span>`,
+          iconSize: null
+        }),
+        interactive: false
+      }).addTo(window.concelloLabelsLayer);
+    });
+    window.concelloLabelsLayer.addTo(map);
+  });
+
+let layerCamino;
+window.geojsonCamino = null;
+// Crear pane para camiño por riba dos concellos (despois de cargar concellos)
+function crearPaneCaminho() {
+  if (!map.getPane('caminhoPane')) {
+    map.createPane('caminhoPane');
+    map.getPane('caminhoPane').style.zIndex = 500;
+  }
+}
+
+
+// haversineMetrosGlobal está definida en app.js (cargado antes deste script)
+
+// Atopar POIs próximos a un punto (raio en metros)
+// Os datos de cada sección teñen estrutura {subcategorias: [...], items: [...]}
+// Os items están no nivel raíz, non dentro de cada subcategoría
+function atoparPoisProximos(lat, lng, raio = 2000) {
+  const pois = [];
+  if (!window.sidebarData) return pois;
+
+  for (const seccionId of Object.keys(window.sidebarData)) {
+    const data = window.sidebarData[seccionId];
+    if (!data?.items) continue;
+
+    for (const item of data.items) {
+      const itemLat = parseFloat(item.lat);
+      const itemLng = parseFloat(item.lng);
+      if (isNaN(itemLat) || isNaN(itemLng)) continue;
+      const dist = haversineMetrosGlobal(lat, lng, itemLat, itemLng);
+      if (dist <= raio) {
+        pois.push({ ...item, distancia: Math.round(dist), seccionId });
+      }
+    }
+  }
+
+  // Ordenar por distancia
+  pois.sort((a, b) => a.distancia - b.distancia);
+  return pois;
+}
+
+// Resaltar POIs no mapa (crear capa temporal)
+window.poisResaltadosLayer = null;
+function resaltarPoisNoMapa(pois) {
+  if (window.poisResaltadosLayer) {
+    map.removeLayer(window.poisResaltadosLayer);
+  }
+  if (!pois.length) return;
+
+  window.poisResaltadosLayer = L.layerGroup();
+  pois.slice(0, 10).forEach(poi => {
+    const lat = parseFloat(poi.lat);
+    const lng = parseFloat(poi.lng);
+    const circle = L.circleMarker([lat, lng], {
+      radius: 12,
+      color: '#1976D2',
+      weight: 3,
+      fillColor: '#64B5F6',
+      fillOpacity: 0.5
+    });
+    circle.bindTooltip(poi.nome || poi.slug, { permanent: false, direction: 'top' });
+    window.poisResaltadosLayer.addLayer(circle);
+  });
+  window.poisResaltadosLayer.addTo(map);
+}
+
+function actualizarCapaCamino() {
+  if (layerCamino) {
+    map.removeLayer(layerCamino);
+  }
+  crearPaneCaminho();
+  const checks = document.querySelectorAll('#rutasCheckboxes input[type=checkbox]:checked');
+  const nomesActivos = Array.from(checks).map(chk => chk.value);
+  const featuresFiltradas = window.geojsonCamino.features.filter(f => nomesActivos.includes(f.properties.Name));
+  layerCamino = L.geoJSON({type: 'FeatureCollection', features: featuresFiltradas}, {
+    pane: 'caminhoPane',
+    style: function(feature) {
+      const tipo = clasificarTramo(feature.properties.Name);
+      const orixe = window.caminoSeleccionado || 'ferrol';
+      const outroOrixe = orixe === 'ferrol' ? 'coruna' : 'ferrol';
+      const esInactivo = (tipo === outroOrixe);
+      return {
+        color: esInactivo ? '#888' : '#ffd600',
+        weight: esInactivo ? 4 : 5,
+        opacity: esInactivo ? 0.7 : 0.8,
+        lineCap: 'round',
+        lineJoin: 'round',
+        dashArray: esInactivo ? '6 4' : null
+      };
+    },
+    onEachFeature: function(feature, layer) {
+      layer.on('click', function(e) {
+        L.DomEvent.stopPropagation(e);
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        const pois = atoparPoisProximos(lat, lng, 2000);
+
+        // Resaltar no mapa
+        resaltarPoisNoMapa(pois);
+
+        // Crear popup con lista de POIs
+        let html = `<div class="popup-pois-proximos">
+          <b style="color:#333"><i class="fa-solid fa-map-pin me-1"></i>POIs próximos (2km)</b>
+          <hr class="my-1">`;
+
+        if (pois.length === 0) {
+          html += '<div class="text-muted small">Non hai elementos próximos nesta zona.</div>';
+        } else {
+          html += '<ul class="list-unstyled mb-0" style="max-height:200px;overflow-y:auto;font-size:0.9em">';
+          pois.slice(0, 10).forEach(poi => {
+            const nome = poi.nome || poi.slug;
+            html += `<li class="mb-1">
+              <a href="#" class="poi-link" data-lat="${poi.lat}" data-lng="${poi.lng}" style="color:#1976D2;text-decoration:none">
+                <i class="fa-solid fa-location-dot me-1"></i>${nome}
+              </a>
+              <span class="text-muted" style="font-size:0.8em">(${poi.distancia}m)</span>
+            </li>`;
+          });
+          html += '</ul>';
+          if (pois.length > 10) {
+            html += `<div class="text-muted small mt-1">e ${pois.length - 10} máis...</div>`;
+          }
+        }
+        html += '</div>';
+
+        L.popup()
+          .setLatLng(e.latlng)
+          .setContent(html)
+          .openOn(map);
+      });
+    }
+  }).addTo(map);
+}
+// Facer accesible globalmente
+window.actualizarCapaCamino = actualizarCapaCamino;
+
+// Cargar GeoJSON do camiño e xerar checkboxes
+fetch(urlCamino)
+  .then(resp => resp.json())
+  .then(data => {
+    window.geojsonCamino = data;
+    const nomes = Array.from(new Set(data.features.map(f => f.properties.Name)));
+    const rutasDiv = document.getElementById('rutasCheckboxes');
+
+    // Agrupación única, evitar duplicidade
+    // Agrupación por orixe, restaurando agrupación humana
+    // Todo ata e03t03 pertence a Ferrol
+    // Ferrol: ata e03t03, excluíndo os de Coruña (e01Vt01-e01Vt05)
+    const coruna_codigos = [
+      'CIN-e01Vt01-ACORUÑA-BRUMA(ACoruña-OBurgo)',
+      'CIN-e01Vt02-ACORUÑA-BRUMA(OBurgo-PontedeAXira)',
+      'CIN-e01Vt03-ACORUÑA-BRUMA(PontedeAXira-Sergude)',
+      'CIN-e01Vt04-ACORUÑA-BRUMA(Sergude-Sarandós)',
+      'CIN-e01Vt05-ACORUÑA-BRUMA(Sarandós-Bruma)'
+    ];
+    const ferrol = nomes.filter(n => {
+      const m = n.match(/^CIN-e(\d{2})/);
+      return m && parseInt(m[1], 10) <= 3 && !coruna_codigos.includes(n);
+    });
+    // Tramos de Coruña: e01Vt01 a e01Vt05
+    const coruna = nomes.filter(n => n.match(/^CIN-e01Vt0[1-5]/));
+    const outros = nomes.filter(n => !ferrol.includes(n) && !coruna.includes(n));
+let html = '';
+if (ferrol.length) {
+  // Xerarquía: etapa > tramo > variante
+  // 1. Agrupar por etapa
+  const etapas = {};
+  ferrol.forEach(nome => {
+    const m = nome.match(/^CIN-(e\d{2})t(\d{2})([a-zA-Z0-9]*)-([^\(]+)\(([^\)]+)\)/);
+    if (!m) return;
+    const etapa = m[1];
+    const tramo = m[2];
+    const variante = m[3] || 'única';
+    const ref = m[4];
+    const segmento = m[5];
+    if (!etapas[etapa]) etapas[etapa] = {};
+    // Se hai variante p1, p2, c... e o tramo é e03t01, tratar como tramos independentes
+    if (etapa === 'e03' && tramo === '01' && variante.match(/^p\d+$/)) {
+      // Tratar cada variante como tramo independente
+      const key = `${tramo}${variante}`;
+      if (!etapas[etapa][key]) etapas[etapa][key] = [];
+      etapas[etapa][key].push({ nome, variante, ref, segmento });
+    } else {
+      if (!etapas[etapa][tramo]) etapas[etapa][tramo] = [];
+      etapas[etapa][tramo].push({ nome, variante, ref, segmento });
+    }
+  });
+  html += '<div class="fw-bold mb-1">Desde Ferrol</div>';
+  Object.entries(etapas).forEach(([etapa, tramos]) => {
+    html += `<div class='ms-1'><span class='fw-semibold'>Etapa ${etapa}</span></div>`;
+    Object.entries(tramos).forEach(([tramo, variantes]) => {
+      const seg = variantes[0].segmento;
+      html += `<div class='ms-2'><span class='text-primary'>Tramo ${tramo}: ${seg}</span></div>`;
+      variantes.forEach((v, j) => {
+        html += `<div class='form-check ms-4'>` +
+          `<input class='form-check-input' type='checkbox' value='${v.nome}' id='rutaFerrol${etapa}${tramo}${j}'>` +
+          `<label class='form-check-label' for='rutaFerrol${etapa}${tramo}${j}'>Variante ${v.variante}</label>` +
+        `</div>`;
+      });
+    });
+  });
+}
+if (coruna.length) {
+  html += '<div class="fw-bold mt-2 mb-1">Desde A Coruña</div>' + coruna.map((nome, i) => `
+    <div class="form-check ms-2">
+      <input class="form-check-input" type="checkbox" value="${nome}" id="rutaCoruna${i}">
+      <label class="form-check-label" for="rutaCoruna${i}">${nome}</label>
+    </div>
+  `).join('');
+}
+if (outros.length) {
+  html += '<div class="fw-bold mt-2 mb-1">Outras</div>' + outros.map((nome, i) => `
+    <div class="form-check ms-2">
+      <input class="form-check-input" type="checkbox" value="${nome}" id="rutaOutra${i}">
+      <label class="form-check-label" for="rutaOutra${i}">${nome}</label>
+    </div>
+  `).join('');
+}
+rutasDiv.innerHTML = html;
+  // Engadir listeners aos checkboxes para actualizar o mapa e elevación
+  document.querySelectorAll('#rutasCheckboxes input[type=checkbox]').forEach(chk => {
+    chk.addEventListener('change', () => {
+      actualizarCapaCamino();
+      if (window.elevationData) actualizarElevacion();
+    });
+  });
+  // Activar todas as rutas e aplicar selector (Ferrol por defecto)
+  document.querySelectorAll('#rutasCheckboxes input[type=checkbox]').forEach(chk => chk.checked = true);
+  window.caminoSeleccionado = 'ferrol';
+  actualizarCapaCamino();
+  if (layerCamino && layerCamino.getBounds().isValid()) {
+    map.fitBounds(layerCamino.getBounds(), {padding: [20, 20]});
+  }
+  // Cargar datos de elevación
+  cargarElevacion();
+});
+</script>
+<script>
+// Adaptar tamaño das labels ao zoom
+function updateConcelloLabelsFont() {
+  const z = map.getZoom();
+  const minZoom = 7, maxZoom = 18;
+  const minSize = 1.0, maxSize = 1.7;
+  let size = minSize + (maxSize - minSize) * ((z - minZoom) / (maxZoom - minZoom));
+  if (size < minSize) size = minSize;
+  if (size > maxSize) size = maxSize;
+  document.querySelectorAll('.concello-label span').forEach(el => {
+    el.style.fontSize = size + 'em';
+    el.style.display = (z <= zoom - 2) ? 'none' : '';
+  });
+}
+map.on('zoomend', updateConcelloLabelsFont);
+map.whenReady(updateConcelloLabelsFont);
+const sidebarHamburger = document.getElementById('sidebarHamburger');
+const sidebarOffcanvas = document.getElementById('sidebarOffcanvas');
+if (sidebarHamburger && sidebarOffcanvas) {
+  sidebarOffcanvas.addEventListener('show.bs.offcanvas', () => {
+    sidebarHamburger.style.display = 'none';
+  });
+  sidebarOffcanvas.addEventListener('hidden.bs.offcanvas', () => {
+    sidebarHamburger.style.display = '';
+  });
+}
+</script>
+{% endblock %}

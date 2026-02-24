@@ -1,0 +1,22 @@
+{
+"type": "FeatureCollection",
+"name": "Xardins_Ruta_Camelia_Galicia",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "NOME": "Pazo-Museo Quiñones de León", "LUGAR": "Vigo", "NUMERO": 1 }, "geometry": { "type": "Point", "coordinates": [ -8.727634620735742, 42.213205679554093 ] } },
+{ "type": "Feature", "properties": { "NOME": "Parque do Castro", "LUGAR": "Vigo", "NUMERO": 2 }, "geometry": { "type": "Point", "coordinates": [ -8.726272307412446, 42.231817835943609 ] } },
+{ "type": "Feature", "properties": { "NOME": "Castelo de Soutomaior", "LUGAR": "Soutomaior", "NUMERO": 3 }, "geometry": { "type": "Point", "coordinates": [ -8.568343051273676, 42.329557269973002 ] } },
+{ "type": "Feature", "properties": { "NOME": "Pazo de Lourizán", "LUGAR": "Pontevedra", "NUMERO": 4 }, "geometry": { "type": "Point", "coordinates": [ -8.664768455894913, 42.409511980778234 ] } },
+{ "type": "Feature", "properties": { "NOME": "Pazo da Saleta", "LUGAR": "Meis", "NUMERO": 5 }, "geometry": { "type": "Point", "coordinates": [ -8.716693059006007, 42.519675890909582 ] } },
+{ "type": "Feature", "properties": { "NOME": "Pazo de Quinteiro da Cruz", "LUGAR": "Ribadumia", "NUMERO": 6 }, "geometry": { "type": "Point", "coordinates": [ -8.72816634131078, 42.53029006058982 ] } },
+{ "type": "Feature", "properties": { "NOME": "Pazo de Rubiáns", "LUGAR": "Vilagarcía de Arousa", "NUMERO": 7 }, "geometry": { "type": "Point", "coordinates": [ -8.733078082717451, 42.5781326968971 ] } },
+{ "type": "Feature", "properties": { "NOME": "Casa-Museo de Rosalía de Castro", "LUGAR": "Padrón", "NUMERO": 8 }, "geometry": { "type": "Point", "coordinates": [ -8.651856339115982, 42.738434173646212 ] } },
+{ "type": "Feature", "properties": { "NOME": "Pazo de Oca", "LUGAR": "A Estrada", "NUMERO": 9 }, "geometry": { "type": "Point", "coordinates": [ -8.39515474577194, 42.746234576716212 ] } },
+{ "type": "Feature", "properties": { "NOME": "Pazo de Santa Cruz de Ribadulla", "LUGAR": "Vedra", "NUMERO": 10 }, "geometry": { "type": "Point", "coordinates": [ -8.425641924242816, 42.771294845617192 ] } },
+{ "type": "Feature", "properties": { "NOME": "Pazo de Mariñán", "LUGAR": "Bergondo", "NUMERO": 11 }, "geometry": { "type": "Point", "coordinates": [ -8.21633650489108, 43.317286267258972 ] } },
+{ "type": "Feature", "properties": { "NOME": "Alameda de Santiago", "LUGAR": "Santiago de Compostela", "NUMERO": 12 }, "geometry": { "type": "Point", "coordinates": [ -8.54925428157591, 42.877505980913114 ] } },
+{ "type": "Feature", "properties": { "NOME": "Estación fitopatolóxica de Areeiro", "LUGAR": "Pontevedra", "NUMERO": 13 }, "geometry": { "type": "Point", "coordinates": [ -8.672914719751414, 42.405828615030579 ] } },
+{ "type": "Feature", "properties": { "NOME": "Pazo de Gandarón", "LUGAR": "Pontevedra", "NUMERO": 14 }, "geometry": { "type": "Point", "coordinates": [ -8.643899017970123, 42.405031511591325 ] } },
+{ "type": "Feature", "properties": { "NOME": "Xardíns do Palacio Provincial", "LUGAR": "Pontevedra", "NUMERO": 15 }, "geometry": { "type": "Point", "coordinates": [ -8.648208671618507, 42.430126598412571 ] } }
+]
+}

@@ -1,0 +1,26 @@
+{
+  "proxectos": {
+    "camino-ingles": {
+      "id": "camino-ingles",
+      "nome": "Camiño Inglés",
+      "centro": {"lat": 42.8782, "lng": -8.5446},
+      "zoom_inicial": 10,
+      "map_id": 38,
+      "capas": {
+        "ruta": {
+          "ficheiro": "camino_ingles.geojson",
+          "estilo": {"cor": "#e63946", "grosor": 4},
+          "visible_por_defecto": true
+        },
+        "concellos": {
+          "ficheiro": "concellos_camino_ingles.geojson",
+          "estilo": {"cor_borde": "#333", "opacidade": 0.3},
+          "visible_por_defecto": true
+        }
+      },
+      "filtrar_por_concellos": true
+    }
+  },
+  "proxecto_por_defecto": "camino-ingles",
+  "auto_detectar_geojson": true
+}

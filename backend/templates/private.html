@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Zona privada{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2>Zona privada</h2>
+  <p>Benvido/a, {{ user }}! Esta é unha ruta protexida.</p>
+  <a href="/logout" class="btn btn-secondary">Pechar sesión</a>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Rexistro{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:420px;">
+  <h2 class="mb-4">Crear conta</h2>
+  {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+  <form method="post" novalidate>
+    <div class="mb-3">
+      <label for="username" class="form-label">Nome de usuario</label>
+      <input type="text" class="form-control" id="username" name="username"
+             value="{{ request.form.get('username', '') }}" required autocomplete="username">
+    </div>
+    <div class="mb-3">
+      <label for="email" class="form-label">Correo electrónico</label>
+      <input type="email" class="form-control" id="email" name="email"
+             value="{{ request.form.get('email', '') }}" required autocomplete="email">
+    </div>
+    <div class="mb-3">
+      <label for="password" class="form-label">Contrasinal</label>
+      <input type="password" class="form-control" id="password" name="password"
+             required autocomplete="new-password" minlength="8">
+      <div class="form-text">Mínimo 8 caracteres.</div>
+    </div>
+    <div class="mb-3">
+      <label for="password2" class="form-label">Confirmar contrasinal</label>
+      <input type="password" class="form-control" id="password2" name="password2"
+             required autocomplete="new-password">
+    </div>
+    <div class="mb-3">
+      <label for="rol" class="form-label">Tipo de conta</label>
+      <select class="form-select" id="rol" name="rol">
+        <option value="peregrino" {% if request.form.get('rol','peregrino')=='peregrino' %}selected{% endif %}>Peregrino/a</option>
+        <option value="provedor" {% if request.form.get('rol')=='provedor' %}selected{% endif %}>Provedor/a de servizos</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Rexistrarse</button>
+  </form>
+  <hr class="my-3">
+  <p class="text-center text-muted small mb-0">
+    Xa tes conta? <a href="{{ url_for('main.login') }}">Inicia sesión</a>
+  </p>
+</div>
+{% endblock %}

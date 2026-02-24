@@ -1,0 +1,7 @@
+<form method="get" action="" class="mb-3">
+  <select name="lang" onchange="this.form.submit()" class="form-select form-select-sm w-auto d-inline-block">
+    <option value="gl" {% if get_locale() == 'gl' %}selected{% endif %}>Galego</option>
+    <option value="es" {% if get_locale() == 'es' %}selected{% endif %}>Castelán</option>
+    <option value="en" {% if get_locale() == 'en' %}selected{% endif %}>English</option>
+  </select>
+</form>
